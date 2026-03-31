@@ -33,7 +33,7 @@ pub const DEPENDENCIES: &[Dependency] = &[
     },
     Dependency {
         name: "rustc",
-        args: &["--target", "x86_64-apple-darwin", "--version"],
+        args: &["--target", "aarch64-apple-darwin", "--version"],
         label: "macOS target (aarch64)",
     },
 ];

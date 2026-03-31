@@ -14,7 +14,7 @@ pub fn check_dependency(cmd: &str, args: &[&str]) -> Result<(), DependencyError>
 
     match output {
         Ok(status) if status.success() => Ok(()),
-        Ok(_) => Err(DependencyError::ExecutionError), 
+        Ok(_) => Err(DependencyError::ExecutionError),
         Err(_) => Err(DependencyError::NotFound),
     }
 }

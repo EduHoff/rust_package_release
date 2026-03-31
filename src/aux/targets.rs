@@ -7,7 +7,4 @@ const TARGETS: &[&str] = &[
     "x86_64-unknown-netbsd",
 ];
 
-const MAC_TARGETS: &[&str] = &[
-    "x86_64-apple-darwin",
-    "aarch64-apple-darwin",
-];
+const MAC_TARGETS: &[&str] = &["x86_64-apple-darwin", "aarch64-apple-darwin"];

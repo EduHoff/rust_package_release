@@ -1,0 +1,8 @@
+[package]
+name = "rust_package_release"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+colored = "3.1.1"
+clearscreen = "4.0"

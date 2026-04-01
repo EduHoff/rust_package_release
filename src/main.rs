@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use chrono::Local;
 use clearscreen::clear;
@@ -7,6 +7,7 @@ use rust_package_release::aux::{
     build_target::{Builder, build_target},
     check_dependency::{DependencyError, check_dependency},
     dependencies::DEPENDENCIES,
+    project_data::{get_license_file, get_project_name},
     targets::{MAC_TARGETS, TARGETS},
     write_log::write_log,
 };
@@ -17,6 +18,25 @@ fn main() {
     let file_log_name = Local::now()
         .format("log_%Y-%m-%dT%Hh%Mm%Ss%:z.txt")
         .to_string();
+
+    let has_cargo = Path::new("Cargo.toml").exists();
+    let has_src = Path::new("src/main.rs").exists() || Path::new("src/lib.rs").exists();
+
+    if !has_cargo || !has_src {
+        let msg = "Error: Not a valid Rust project (missing Cargo.toml or src files).";
+        eprintln!("{}", msg.red());
+        let _ = write_log(msg, &file_log_name);
+
+        #[cfg(windows)]
+        let _ = std::process::Command::new("cmd")
+            .arg("/c")
+            .arg("pause")
+            .status();
+        return;
+    }
+
+    let get_project_name = get_project_name();
+    let license_file = get_license_file();
 
     let mut status_dependencies_map: HashMap<&str, bool> = HashMap::new();
     for dep in DEPENDENCIES {

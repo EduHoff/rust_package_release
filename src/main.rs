@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, env, path::PathBuf};
 
 use chrono::Local;
 use clearscreen::clear;
@@ -6,6 +6,7 @@ use colored::Colorize;
 use rust_package_release::aux::{
     build_target::{Builder, build_target},
     check_dependency::{DependencyError, check_dependency},
+    create_package::create_package,
     dependencies::DEPENDENCIES,
     project_data::{get_license_file, get_project_name},
     targets::{MAC_TARGETS, TARGETS},
@@ -15,17 +16,20 @@ use rust_package_release::aux::{
 fn main() {
     clear().expect("Error: clear failed");
 
+    let root_path: PathBuf =
+        env::current_dir().expect("Error: Could not determine current directory");
+
     let file_log_name = Local::now()
         .format("log_%Y-%m-%dT%Hh%Mm%Ss%:z.txt")
         .to_string();
 
-    let has_cargo = Path::new("Cargo.toml").exists();
-    let has_src = Path::new("src/main.rs").exists() || Path::new("src/lib.rs").exists();
+    let has_cargo = root_path.join("Cargo.toml").exists();
+    let has_src = root_path.join("src/main.rs").exists() || root_path.join("src/lib.rs").exists();
 
     if !has_cargo || !has_src {
         let msg = "Error: Not a valid Rust project (missing Cargo.toml or src files).";
         eprintln!("{}", msg.red());
-        let _ = write_log(msg, &file_log_name);
+        let _ = write_log(msg, &root_path, &file_log_name);
 
         #[cfg(windows)]
         let _ = std::process::Command::new("cmd")
@@ -35,8 +39,8 @@ fn main() {
         return;
     }
 
-    let get_project_name = get_project_name();
-    let license_file = get_license_file();
+    let project_name = get_project_name(&root_path);
+    let license_file = get_license_file(&root_path);
 
     let mut status_dependencies_map: HashMap<&str, bool> = HashMap::new();
     for dep in DEPENDENCIES {
@@ -49,12 +53,12 @@ fn main() {
             Ok(()) => {
                 let msg = format!("{} {}", dep.label, "is installed and running");
                 eprintln!("{}", msg.green());
-                let _ = write_log(&msg, &file_log_name);
+                let _ = write_log(&msg, &root_path, &file_log_name);
             }
             Err(DependencyError::NotFound) => {
                 let msg = format!("{} {}", dep.label, "is not installed");
                 eprintln!("{}", msg.red());
-                let _ = write_log(&msg, &file_log_name);
+                let _ = write_log(&msg, &root_path, &file_log_name);
             }
             Err(DependencyError::ExecutionError) => {
                 let msg = format!(
@@ -62,7 +66,7 @@ fn main() {
                     dep.label, "installed, but it's not working correctly"
                 );
                 eprintln!("{}", msg.red());
-                let _ = write_log(&msg, &file_log_name);
+                let _ = write_log(&msg, &root_path, &file_log_name);
             }
         }
     }
@@ -79,7 +83,7 @@ fn main() {
     if !rustc_ok || !cargo_ok {
         let msg = "You must have rustc and cargo installed!".red();
         eprintln!("{}", msg);
-        let _ = write_log(&msg, &file_log_name);
+        let _ = write_log(&msg, &root_path, &file_log_name);
 
         #[cfg(windows)]
         let _ = std::process::Command::new("cmd")
@@ -101,7 +105,7 @@ fn main() {
 
     if docker_ok && cargo_cross_ok {
         for tag in TARGETS {
-            build_target(Builder::Cross, tag.name, &file_log_name);
+            build_target(Builder::Cross, tag.name, &root_path, &file_log_name);
         }
     }
 
@@ -115,16 +119,16 @@ fn main() {
         .copied()
         .unwrap_or(false);
 
-    if x86_64_apple_ok && aarch64_apple_ok {
+    if x86_64_apple_ok || aarch64_apple_ok {
         for tag in MAC_TARGETS {
-            build_target(Builder::Cargo, tag.name, &file_log_name);
+            build_target(Builder::Cargo, tag.name, &root_path, &file_log_name);
         }
     }
 
     if !(docker_ok && cargo_cross_ok || x86_64_apple_ok && aarch64_apple_ok) {
         let msg = "You must at least have docker and cargo-cross or target some apple".red();
         eprintln!("{}", msg);
-        let _ = write_log(&msg, &file_log_name);
+        let _ = write_log(&msg, &root_path, &file_log_name);
 
         #[cfg(windows)]
         let _ = std::process::Command::new("cmd")
@@ -133,6 +137,38 @@ fn main() {
             .status();
 
         return;
+    }
+
+    if docker_ok && cargo_cross_ok {
+        for tag in TARGETS {
+            if let Err(e) = create_package(
+                &root_path,
+                tag,
+                &project_name,
+                license_file.as_deref(),
+                &file_log_name,
+            ) {
+                let msg = format!("Error creating package: {}", e);
+                eprintln!("{}", msg.red());
+                let _ = write_log(&msg, &root_path, &file_log_name);
+            }
+        }
+    }
+
+    if x86_64_apple_ok || aarch64_apple_ok {
+        for tag in MAC_TARGETS {
+            if let Err(e) = create_package(
+                &root_path,
+                tag,
+                &project_name,
+                license_file.as_deref(),
+                &file_log_name,
+            ) {
+                let msg = format!("Error creating package: {}", e);
+                eprintln!("{}", msg.red());
+                let _ = write_log(&msg, &root_path, &file_log_name);
+            }
+        }
     }
 
     #[cfg(windows)]

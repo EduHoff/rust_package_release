@@ -13,20 +13,12 @@ pub const TARGETS: &[BuildTarget] = &[
         label: "linux-aarch64",
     },
     BuildTarget {
-        name: "i686-unknown-linux-musl",
-        label: "linux-i686",
-    },
-    BuildTarget {
         name: "x86_64-pc-windows-gnu",
         label: "windows-x86_64",
     },
     BuildTarget {
         name: "x86_64-unknown-freebsd",
         label: "freebsd-x86_64",
-    },
-    BuildTarget {
-        name: "x86_64-unknown-netbsd",
-        label: "netbsd-x86_64",
     },
 ];
 
